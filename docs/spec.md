@@ -87,7 +87,7 @@ an in-app Notification and logging to console.
 ## Further Notes
 
 - The project is explicitly a learning exercise; explanatory comments and a
-  step-by-step `podman-compose` walkthrough are in scope during implementation.
+  step-by-step `podman-compose` and `rabbitMQ` walkthrough are in scope during implementation.
 - ADRs `0001`–`0006` are the source of truth for the architectural decisions
   above; if implementation diverges, update the ADR rather than the prose here.
 - Issue tracker: GitHub Issues (see `docs/agents/issue-tracker.md`). Triage label `ready-for-agent` applied on publish.
