@@ -21,37 +21,35 @@ app.listen(PORT, () => console.log(`gateway listening on :${PORT}`));
 void initInfra();
 
 async function initInfra(): Promise<void> {
-  await declareExchangeWithRetry();
-  await checkPostgresWithRetry();
+  await retry('rabbitmq', declareExchange);
+  await retry('postgres', checkPostgres);
 }
 
-async function declareExchangeWithRetry(): Promise<void> {
-  for (let attempt = 1; ; attempt++) {
-    try {
-      const conn = await amqp.connect(RABBITMQ_URL);
-      const ch = await conn.createChannel();
-      await ch.assertExchange(EXCHANGE, 'topic', { durable: true });
-      console.log(`declared topic exchange "${EXCHANGE}"`);
-      await ch.close();
-      await conn.close();
-      return;
-    } catch (err) {
-      console.warn(`rabbitmq not ready (attempt ${attempt}), retrying in 2s...`);
-      await sleep(2000);
-    }
-  }
+async function declareExchange(): Promise<void> {
+  const conn = await amqp.connect(RABBITMQ_URL);
+  const ch = await conn.createChannel();
+  await ch.assertExchange(EXCHANGE, 'topic', { durable: true });
+  console.log(`declared topic exchange "${EXCHANGE}"`);
+  await ch.close();
+  await conn.close();
 }
 
-async function checkPostgresWithRetry(): Promise<void> {
+async function checkPostgres(): Promise<void> {
   const pool = new Pool({ connectionString: DATABASE_URL });
+  const result = await pool.query('SELECT 1');
+  console.log('postgres reachable:', result.rows[0]);
+  await pool.end();
+}
+
+// Retries forever (2s backoff) so the health server stays up until the broker
+// it depends on is reachable (see ADR-0005: infra comes up with one command).
+async function retry(label: string, fn: () => Promise<void>): Promise<void> {
   for (let attempt = 1; ; attempt++) {
     try {
-      const result = await pool.query('SELECT 1');
-      console.log('postgres reachable:', result.rows[0]);
-      await pool.end();
+      await fn();
       return;
     } catch (err) {
-      console.warn(`postgres not ready (attempt ${attempt}), retrying in 2s...`);
+      console.warn(`${label} not ready (attempt ${attempt}), retrying in 2s...`);
       await sleep(2000);
     }
   }
