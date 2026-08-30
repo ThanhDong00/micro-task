@@ -1,6 +1,4 @@
-.git
-.scratch
 node_modules
 dist
+.git
 *.log
-.env
