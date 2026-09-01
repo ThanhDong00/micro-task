@@ -27,6 +27,22 @@ services:
       timeout: 5s
       retries: 10
 
+  identity:
+    build:
+      context: ../services/identity
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: "3001"
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      DATABASE_URL: postgres://microtask:microtask@postgres:5432/microtask
+      JWT_SECRET: microtask-dev-secret
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
   # Placeholder service for Ticket 01: a health endpoint that also wires up
   # the shared infra (declares the `micro-task` topic exchange, checks Postgres).
   # Identity/Task/Notification are added in later tickets and wired in here.
@@ -39,11 +55,14 @@ services:
       PORT: "8080"
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       DATABASE_URL: postgres://microtask:microtask@postgres:5432/microtask
+      JWT_SECRET: microtask-dev-secret
     depends_on:
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      identity:
+        condition: service_started
 
 volumes:
   postgres-data:
